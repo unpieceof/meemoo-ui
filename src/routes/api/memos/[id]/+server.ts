@@ -11,7 +11,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
     throw error(400, 'Invalid JSON body');
   }
 
-  const allowedFields = ['title', 'category', 'tags', 'summary_bullets'];
+  const allowedFields = ['title', 'category', 'tags', 'summary_bullets', 'raw_content'];
   const update: Record<string, unknown> = {};
   for (const field of allowedFields) {
     if (field in body) {

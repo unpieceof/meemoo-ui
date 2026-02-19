@@ -7,6 +7,7 @@
   let title = $state(memo.title ?? '');
   let category = $state(memo.category ?? '');
   let tagsInput = $state((memo.tags ?? []).join(', '));
+  let rawContent = $state(memo.raw_content ?? '');
   let saving = $state(false);
   let deleting = $state(false);
   let error = $state('');
@@ -23,7 +24,7 @@
       const res = await fetch(`/api/memos/${memo.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, category: category || null, tags })
+        body: JSON.stringify({ title, category: category || null, tags, raw_content: rawContent || null })
       });
 
       if (!res.ok) {
@@ -128,6 +129,16 @@
           bind:value={tagsInput}
           placeholder="예: ai, llm, ux"
         />
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="edit-raw">원문</label>
+        <textarea
+          id="edit-raw"
+          class="field-input field-textarea"
+          bind:value={rawContent}
+          placeholder="원문 내용을 입력하세요"
+        ></textarea>
       </div>
 
       {#if error}
@@ -240,6 +251,13 @@
 
   .field-input:focus {
     border-color: var(--color-accent);
+  }
+
+  .field-textarea {
+    min-height: 160px;
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.6;
   }
 
   .source-link {
