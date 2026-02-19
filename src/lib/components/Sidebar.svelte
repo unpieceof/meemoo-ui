@@ -5,11 +5,15 @@
   let {
     categories,
     total,
-    allTags
+    allTags,
+    open = true,
+    onToggle
   }: {
     categories: Record<string, number>;
     total: number;
     allTags: string[];
+    open?: boolean;
+    onToggle?: () => void;
   } = $props();
 
   let currentCategory = $derived($page.url.searchParams.get('category') ?? '');
@@ -44,9 +48,14 @@
   );
 </script>
 
-<aside class="sidebar">
+<aside class="sidebar" class:collapsed={!open}>
   <div class="sidebar-header">
     <a href="/" class="logo">meemoo</a>
+    <button class="toggle-btn" onclick={onToggle} aria-label="사이드바 접기">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+    </button>
   </div>
 
   <nav class="sidebar-nav">
@@ -106,11 +115,42 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    overflow-x: hidden;
+    transition: width 0.2s ease;
+  }
+
+  .sidebar.collapsed {
+    width: 0;
+    border-right: none;
   }
 
   .sidebar-header {
     padding: 20px 16px 16px;
     border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .toggle-btn:hover {
+    background-color: var(--color-bg-elevated);
+    color: var(--color-text-primary);
   }
 
   .logo {
