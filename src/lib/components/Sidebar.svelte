@@ -46,7 +46,7 @@
 
 <aside class="sidebar">
   <div class="sidebar-header">
-    <span class="logo">meemoo</span>
+    <a href="/" class="logo">meemoo</a>
   </div>
 
   <nav class="sidebar-nav">
@@ -118,6 +118,7 @@
     font-weight: 700;
     color: var(--color-accent);
     letter-spacing: 0.5px;
+    text-decoration: none;
   }
 
   .sidebar-nav {
