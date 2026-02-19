@@ -226,16 +226,28 @@
 
   .summary-list {
     margin: 0;
-    padding: 0 0 0 18px;
+    padding: 0;
+    list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
   }
 
   .summary-list li {
     font-size: 14px;
     color: var(--color-text-primary);
     line-height: 1.6;
+    padding-left: 18px;
+    position: relative;
+  }
+
+  .summary-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--color-accent);
+    font-size: 16px;
+    line-height: 1.4;
   }
 
   .raw-content {
