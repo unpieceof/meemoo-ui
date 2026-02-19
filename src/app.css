@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg-base: #1a1a1a;
-  --color-bg-surface: #212121;
-  --color-bg-elevated: #2a2a2a;
-  --color-border: #3a3a3a;
-  --color-text-primary: #ececec;
-  --color-text-secondary: #8c8c8c;
+  --color-bg-base: #f4f4f4;
+  --color-bg-surface: #ffffff;
+  --color-bg-elevated: #ebebeb;
+  --color-border: #e0e0e0;
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #6b6b6b;
   --color-accent: #cc785c;
-  --color-accent-hover: #d9896e;
+  --color-accent-hover: #b86a4e;
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 * {

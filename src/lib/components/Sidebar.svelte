@@ -53,7 +53,7 @@
     <a href="/" class="logo">meemoo</a>
     <button class="toggle-btn" onclick={onToggle} aria-label="사이드바 접기">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="15 18 9 12 15 6"/>
+        <polyline points="9 18 15 12 9 6"/>
       </svg>
     </button>
   </div>
@@ -111,7 +111,7 @@
     width: 220px;
     flex-shrink: 0;
     background-color: var(--color-bg-surface);
-    border-right: 1px solid var(--color-border);
+    border-left: 1px solid var(--color-border);
     display: flex;
     flex-direction: column;
     overflow-y: auto;
@@ -121,7 +121,7 @@
 
   .sidebar.collapsed {
     width: 0;
-    border-right: none;
+    border-left: none;
   }
 
   .sidebar-header {
