@@ -10,7 +10,7 @@
     params.set('tag', tag);
     params.delete('category');
     params.delete('q');
-    goto(`?${params.toString()}`);
+    goto(`/?${params.toString()}`);
   }
 </script>
 

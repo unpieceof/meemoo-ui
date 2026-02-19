@@ -24,7 +24,7 @@
     }
     params.delete('tag');
     params.delete('q');
-    goto(`?${params.toString()}`);
+    goto(`/?${params.toString()}`);
   }
 
   function selectTag(tag: string) {
@@ -36,7 +36,7 @@
     }
     params.delete('category');
     params.delete('q');
-    goto(`?${params.toString()}`);
+    goto(`/?${params.toString()}`);
   }
 
   const sortedCategories = $derived(
