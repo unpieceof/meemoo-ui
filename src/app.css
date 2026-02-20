@@ -15,6 +15,18 @@
   color-scheme: light;
 }
 
+:root.dark {
+  color-scheme: dark;
+  --color-bg-base: #111111;
+  --color-bg-surface: #1c1c1c;
+  --color-bg-elevated: #252525;
+  --color-border: #333333;
+  --color-text-primary: #e8e8e8;
+  --color-text-secondary: #888888;
+  --color-accent: #d4866a;
+  --color-accent-hover: #e0987c;
+}
+
 * {
   box-sizing: border-box;
 }

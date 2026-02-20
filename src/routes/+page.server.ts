@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     .limit(200);
 
   if (search) {
-    query = query.textSearch('title', search, { type: 'websearch', config: 'simple' });
+    query = query.or(`title.ilike.%${search}%,tags.cs.{"${search}"}`);
   }
   if (category) {
     query = query.eq('category', category);
