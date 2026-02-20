@@ -6,20 +6,19 @@
 
   let value = $state(initialValue);
   let debounceTimer: ReturnType<typeof setTimeout>;
+  let inputEl: HTMLInputElement;
 
-  function handleInput(e: Event) {
-    const input = e.currentTarget as HTMLInputElement;
-    value = input.value;
-
+  function handleInput() {
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
+    debounceTimer = setTimeout(async () => {
       const params = new URLSearchParams($page.url.searchParams);
       if (value.trim()) {
         params.set('q', value.trim());
       } else {
         params.delete('q');
       }
-      goto(`?${params.toString()}`, { replaceState: true });
+      await goto(`?${params.toString()}`, { replaceState: true });
+      inputEl?.focus();
     }, 300);
   }
 
@@ -27,7 +26,7 @@
     value = '';
     const params = new URLSearchParams($page.url.searchParams);
     params.delete('q');
-    goto(`?${params.toString()}`, { replaceState: true });
+    goto(`?${params.toString()}`, { replaceState: true }).then(() => inputEl?.focus());
   }
 </script>
 
@@ -41,7 +40,8 @@
       type="search"
       class="search-input"
       placeholder="메모 검색..."
-      {value}
+      bind:value
+      bind:this={inputEl}
       oninput={handleInput}
     />
     {#if value}
