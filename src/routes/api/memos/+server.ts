@@ -13,7 +13,10 @@ export const GET: RequestHandler = async ({ locals, url }) => {
     .limit(200);
 
   if (search) {
-    query = query.or(`title.ilike.%${search}%,tags.cs.{"${search}"}`);
+    const terms = search.trim().split(/\s+/).filter(Boolean);
+    for (const term of terms) {
+      query = query.or(`title.ilike.%${term}%,tags.cs.{"${term}"}`);
+    }
   }
   if (category) {
     query = query.eq('category', category);
