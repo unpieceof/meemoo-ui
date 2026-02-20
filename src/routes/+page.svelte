@@ -8,8 +8,35 @@
 
   let { data }: { data: PageData } = $props();
 
+  // 결과 목록은 로컬 상태로 관리 — 검색 시 페이지 재렌더링 없음
+  let memos = $state(data.memos);
+  let currentSearch = $state(data.search);
   let editingMemo: Memo | null = $state(null);
   let view = $state<'card' | 'list'>('card');
+
+  // 카테고리/태그 이동(goto) 시에만 서버 데이터로 동기화
+  $effect(() => {
+    memos = data.memos;
+    currentSearch = data.search;
+  });
+
+  async function handleSearch(query: string) {
+    currentSearch = query;
+
+    // URL만 업데이트 (내비게이션 없음 → 포커스 유지)
+    const params = new URLSearchParams(window.location.search);
+    if (query) {
+      params.set('q', query);
+    } else {
+      params.delete('q');
+    }
+    history.replaceState(null, '', `?${params.toString()}`);
+
+    // 결과만 별도 fetch
+    const res = await fetch(`/api/memos?${params.toString()}`);
+    const result = await res.json();
+    memos = result.memos;
+  }
 
   function handleEdit(memo: Memo) {
     editingMemo = memo;
@@ -21,13 +48,13 @@
 </script>
 
 <div class="page">
-  <SearchBar initialValue={data.search} />
+  <SearchBar initialValue={data.search} onSearch={handleSearch} />
 
-  {#if data.memos.length === 0}
-    <EmptyState search={data.search} category={data.category} tag={data.tag} />
+  {#if memos.length === 0}
+    <EmptyState search={currentSearch} category={data.category} tag={data.tag} />
   {:else}
     <div class="results-header">
-      <span class="results-count">{data.memos.length}개 메모</span>
+      <span class="results-count">{memos.length}개 메모</span>
       {#if data.category}
         <span class="filter-badge">카테고리: {data.category}</span>
       {/if}
@@ -50,7 +77,7 @@
         </button>
       </div>
     </div>
-    <MemoList memos={data.memos} onEdit={handleEdit} {view} />
+    <MemoList {memos} onEdit={handleEdit} {view} />
   {/if}
 </div>
 

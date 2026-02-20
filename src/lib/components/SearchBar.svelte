@@ -1,32 +1,31 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
-
-  let { initialValue = '' }: { initialValue?: string } = $props();
+  let {
+    initialValue = '',
+    onSearch
+  }: {
+    initialValue?: string;
+    onSearch?: (q: string) => void;
+  } = $props();
 
   let value = $state(initialValue);
   let debounceTimer: ReturnType<typeof setTimeout>;
-  let inputEl: HTMLInputElement;
+
+  // 외부에서 initialValue가 바뀌면 (카테고리/태그 이동 시) 입력창도 초기화
+  $effect(() => {
+    value = initialValue;
+  });
 
   function handleInput() {
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(async () => {
-      const params = new URLSearchParams($page.url.searchParams);
-      if (value.trim()) {
-        params.set('q', value.trim());
-      } else {
-        params.delete('q');
-      }
-      await goto(`?${params.toString()}`, { replaceState: true });
-      inputEl?.focus();
+    debounceTimer = setTimeout(() => {
+      onSearch?.(value.trim());
     }, 300);
   }
 
   function handleClear() {
     value = '';
-    const params = new URLSearchParams($page.url.searchParams);
-    params.delete('q');
-    goto(`?${params.toString()}`, { replaceState: true }).then(() => inputEl?.focus());
+    clearTimeout(debounceTimer);
+    onSearch?.('');
   }
 </script>
 
@@ -41,7 +40,6 @@
       class="search-input"
       placeholder="메모 검색..."
       bind:value
-      bind:this={inputEl}
       oninput={handleInput}
     />
     {#if value}
