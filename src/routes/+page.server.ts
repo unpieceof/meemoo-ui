@@ -8,7 +8,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   let query = locals.supabase
     .from('memos')
     .select('id,title,summary_bullets,category,tags,source_url,source_type,created_at')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(200);
 
   if (search) {
     query = query.textSearch('title', search, { type: 'websearch', config: 'simple' });

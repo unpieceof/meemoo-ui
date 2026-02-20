@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
   import TagBadge from './TagBadge.svelte';
   import type { Memo } from '$lib/supabase/types';
 
@@ -9,14 +8,9 @@
     const d = new Date(iso);
     return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
   }
-
-  function handleClick(e: MouseEvent) {
-    if ((e.target as HTMLElement).closest('button, a')) return;
-    goto(`/memo/${memo.id}`);
-  }
 </script>
 
-<div class="list-item" onclick={handleClick}>
+<a href="/memo/{memo.id}" class="list-item">
   <div class="item-main">
     <span class="item-title">{memo.title}</span>
     <div class="item-badges">
@@ -32,7 +26,7 @@
     <time class="date">{formatDate(memo.created_at)}</time>
     <button
       class="edit-btn"
-      onclick={() => onEdit(memo)}
+      onclick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(memo); }}
       title="편집"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -41,7 +35,7 @@
       </svg>
     </button>
   </div>
-</div>
+</a>
 
 <style>
   .list-item {

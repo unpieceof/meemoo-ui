@@ -1,15 +1,10 @@
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
-  const { data: categories } = await locals.supabase
-    .from('memos')
-    .select('category')
-    .not('category', 'is', null);
-
-  const { data: tagsData } = await locals.supabase
-    .from('memos')
-    .select('tags')
-    .not('tags', 'is', null);
+  const [{ data: categories }, { data: tagsData }] = await Promise.all([
+    locals.supabase.from('memos').select('category').not('category', 'is', null),
+    locals.supabase.from('memos').select('tags').not('tags', 'is', null)
+  ]);
 
   // Count per category
   const categoryCounts: Record<string, number> = {};
