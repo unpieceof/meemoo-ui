@@ -1,11 +1,12 @@
 <script lang="ts">
   import '../app.css';
   import Sidebar from '$lib/components/Sidebar.svelte';
+  import { browser } from '$app/environment';
   import type { LayoutData } from './$types';
 
   let { data, children }: { data: LayoutData; children: any } = $props();
 
-  let sidebarOpen = $state(true);
+  let sidebarOpen = $state(browser ? window.innerWidth > 640 : true);
 </script>
 
 <div class="app-shell">
