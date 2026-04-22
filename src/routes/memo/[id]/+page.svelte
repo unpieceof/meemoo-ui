@@ -1,118 +1,30 @@
 <script lang="ts">
-  import { goto, invalidateAll } from '$app/navigation';
-  import TagBadge from '$lib/components/TagBadge.svelte';
-  import EditModal from '$lib/components/EditModal.svelte';
+  import { goto } from '$app/navigation';
   import type { PageData } from './$types';
+  import ReaderBody from '$lib/components/ReaderBody.svelte';
+  import EditModal from '$lib/components/EditModal.svelte';
+  import Footer from '$lib/components/Footer.svelte';
 
   let { data }: { data: PageData } = $props();
 
   let editOpen = $state(false);
-  let copied = $state(false);
-
-  async function copyRawContent() {
-    await navigator.clipboard.writeText(data.memo.raw_content ?? '');
-    copied = true;
-    setTimeout(() => (copied = false), 1500);
-  }
-
-  function formatDate(iso: string) {
-    const d = new Date(iso);
-    return d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' });
-  }
-
-  const sourceIcons: Record<string, string> = {
-    article: '📄',
-    video: '🎬',
-    tweet: '🐦',
-    book: '📚',
-    podcast: '🎙️',
-    default: '🔗'
-  };
-
-  function getSourceIcon(type: string | null) {
-    if (!type) return sourceIcons.default;
-    return sourceIcons[type.toLowerCase()] ?? sourceIcons.default;
-  }
 </script>
 
-<div class="detail-page">
-  <div class="top-bar">
-    <a href="/" class="back-link">
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="15 18 9 12 15 6"/>
-      </svg>
-      목록으로
-    </a>
-    <button class="edit-btn" onclick={() => (editOpen = true)}>
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-      </svg>
-      편집
-    </button>
-  </div>
-
-  <article class="memo-detail">
-    <h1 class="memo-title">{data.memo.title}</h1>
-
-    <div class="memo-meta">
-      {#if data.memo.category}
-        <span class="category">{data.memo.category}</span>
-      {/if}
-      {#if data.memo.source_type}
-        <span class="source-type">{getSourceIcon(data.memo.source_type)} {data.memo.source_type}</span>
-      {/if}
-      <time class="date" datetime={data.memo.created_at}>{formatDate(data.memo.created_at)}</time>
-      {#if data.memo.source_url}
-        <a href={data.memo.source_url} target="_blank" rel="noopener noreferrer" class="source-link">
-          🔗 원본
-        </a>
-      {/if}
+<header class="head">
+  <div class="inner">
+    <a class="mono back" href="/">← Back to index</a>
+    <div class="actions">
+      <button class="mono edit" onclick={() => (editOpen = true)}>Edit</button>
+      <a class="mono close" href="/">Close ×</a>
     </div>
+  </div>
+</header>
 
-    {#if (data.memo.tags ?? []).length > 0}
-      <div class="tags">
-        {#each data.memo.tags as tag}
-          <TagBadge {tag} />
-        {/each}
-      </div>
-    {/if}
+<article class="page">
+  <ReaderBody memo={data.memo} />
+</article>
 
-    {#if data.memo.summary_bullets && data.memo.summary_bullets.length > 0}
-      <section class="section">
-        <h2 class="section-title">Summary</h2>
-        <ul class="summary-list">
-          {#each data.memo.summary_bullets as bullet}
-            <li>{bullet}</li>
-          {/each}
-        </ul>
-      </section>
-    {/if}
-
-    {#if data.memo.raw_content}
-      <section class="section">
-        <div class="section-header">
-          <h2 class="section-title">원문</h2>
-          <button class="copy-btn" onclick={copyRawContent}>
-            {#if copied}
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              복사됨
-            {:else}
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-              </svg>
-              복사
-            {/if}
-          </button>
-        </div>
-        <pre class="raw-content">{data.memo.raw_content}</pre>
-      </section>
-    {/if}
-  </article>
-</div>
+<Footer />
 
 {#if editOpen}
   <EditModal
@@ -123,188 +35,52 @@
 {/if}
 
 <style>
-  .detail-page {
-    max-width: 720px;
+  .head {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--paper);
+    border-bottom: 1px solid var(--ink);
+  }
+  .inner {
+    max-width: 1280px;
     margin: 0 auto;
+    padding: 14px 40px;
     display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
-
-  .top-bar {
-    display: flex;
-    align-items: center;
     justify-content: space-between;
-  }
-
-  .back-link {
-    display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 13px;
-    color: var(--color-text-secondary);
-    text-decoration: none;
-    transition: color 0.15s ease;
   }
-
-  .back-link:hover {
-    color: var(--color-text-primary);
-  }
-
-  .edit-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    background: transparent;
-    border: 1px solid var(--color-border);
-    border-radius: 6px;
-    font-size: 13px;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .edit-btn:hover {
-    background-color: var(--color-bg-elevated);
-    color: var(--color-text-primary);
-    border-color: var(--color-text-secondary);
-  }
-
-  .memo-detail {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .memo-title {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--color-text-primary);
-    line-height: 1.4;
-  }
-
-  .memo-meta {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .category {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    background-color: color-mix(in srgb, var(--color-accent) 15%, transparent);
-    border-radius: 4px;
-    font-size: 12px;
-    color: var(--color-accent);
-    font-weight: 500;
-  }
-
-  .source-type {
-    font-size: 12px;
-    color: var(--color-text-secondary);
-    text-transform: capitalize;
-  }
-
-  .date {
-    font-size: 12px;
-    color: var(--color-text-secondary);
-  }
-
-  .source-link {
-    font-size: 12px;
-    color: var(--color-accent);
-    text-decoration: none;
-  }
-
-  .source-link:hover {
-    text-decoration: underline;
-  }
-
-  .tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .section {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding-top: 16px;
-    border-top: 1px solid var(--color-border);
-  }
-
-  .section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .section-title {
-    margin: 0;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--color-text-secondary);
+  .back,
+  .close {
+    font-size: 11px;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: var(--ink-3);
+    text-decoration: none;
   }
-
-  .copy-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 10px;
-    background: transparent;
-    border: 1px solid var(--color-border);
-    border-radius: 5px;
-    font-size: 12px;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .copy-btn:hover {
-    background-color: var(--color-bg-elevated);
-    color: var(--color-text-primary);
-  }
-
-  .summary-list {
-    margin: 0;
-    padding: 0;
-    list-style: none;
+  .actions {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    gap: 18px;
+    align-items: center;
   }
-
-  .summary-list li {
-    font-size: 14px;
-    color: var(--color-text-primary);
-    line-height: 1.6;
-    padding-left: 18px;
-    position: relative;
+  .edit {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--ink);
+    padding-bottom: 2px;
   }
-
-  .summary-list li::before {
-    content: '•';
-    position: absolute;
-    left: 0;
-    color: var(--color-accent);
-    font-size: 16px;
-    line-height: 1.4;
+  .page {
+    max-width: 1280px;
+    margin: 0 auto;
+    width: 100%;
+    flex: 1;
+    display: flex;
+    justify-content: center;
   }
-
-  .raw-content {
-    margin: 0;
-    font-family: inherit;
-    font-size: 13px;
-    color: var(--color-text-secondary);
-    line-height: 1.7;
-    white-space: pre-wrap;
-    word-break: break-word;
+  @media (max-width: 640px) {
+    .inner {
+      padding: 12px 20px;
+    }
   }
 </style>
