@@ -1,8 +1,8 @@
 <script lang="ts">
-  import type { Memo } from '$lib/supabase/types';
-
   let {
-    memos,
+    categoryCounts,
+    tagCounts,
+    total,
     activeCategory,
     setActiveCategory,
     activeTags,
@@ -10,7 +10,9 @@
     onClear,
     filtering
   }: {
-    memos: Memo[];
+    categoryCounts: Record<string, number>;
+    tagCounts: Record<string, number>;
+    total: number;
     activeCategory: string;
     setActiveCategory: (c: string) => void;
     activeTags: string[];
@@ -21,24 +23,17 @@
 
   let tagsOpen = $state(false);
 
-  const categoryEntries = $derived.by(() => {
-    const counts = new Map<string, number>();
-    for (const m of memos) {
-      if (!m.category) continue;
-      counts.set(m.category, (counts.get(m.category) ?? 0) + 1);
-    }
-    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-  });
+  const categoryEntries = $derived(
+    Object.entries(categoryCounts).sort(
+      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
+    )
+  );
 
-  const tagEntries = $derived.by(() => {
-    const counts = new Map<string, number>();
-    for (const m of memos) {
-      for (const t of m.tags ?? []) {
-        counts.set(t, (counts.get(t) ?? 0) + 1);
-      }
-    }
-    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-  });
+  const tagEntries = $derived(
+    Object.entries(tagCounts).sort(
+      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
+    )
+  );
 </script>
 
 <nav class="navbar">
@@ -50,7 +45,7 @@
         class:active={!activeCategory}
         onclick={() => setActiveCategory('')}>
         <span class="mono name" class:bold={!activeCategory}>All</span>
-        <span class="mono count">{String(memos.length).padStart(2, '0')}</span>
+        <span class="mono count">{String(total).padStart(2, '0')}</span>
         {#if !activeCategory}<span class="underline"></span>{/if}
       </button>
       {#each categoryEntries as [cat, n] (cat)}

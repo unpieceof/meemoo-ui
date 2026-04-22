@@ -165,7 +165,9 @@
 />
 
 <Navbar
-  {memos}
+  categoryCounts={data.categoryCounts}
+  tagCounts={data.tagCounts}
+  total={data.total}
   activeCategory={data.category}
   {setActiveCategory}
   activeTags={data.tags}
