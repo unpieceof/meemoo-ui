@@ -1,50 +1,101 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
+  import { invalidateAll, goto } from '$app/navigation';
   import type { Memo } from '$lib/supabase/types';
 
-  let { memo, onClose, onDeleted }: { memo: Memo; onClose: () => void; onDeleted?: () => void } = $props();
+  let {
+    memo,
+    onClose,
+    onSaved,
+    onDeleted
+  }: {
+    memo: Partial<Memo> | null;
+    onClose: () => void;
+    onSaved?: (memo: Memo) => void;
+    onDeleted?: () => void;
+  } = $props();
 
-  let title = $state(memo.title ?? '');
-  let category = $state(memo.category ?? '');
-  let tagsInput = $state((memo.tags ?? []).join(', '));
-  let rawContent = $state(memo.raw_content ?? '');
+  const isNew = $derived(!memo?.id);
+
+  // EditModal remounts when editMemo prop on the parent changes, so capturing
+  // the initial prop values into local $state is intentional here.
+  /* svelte-ignore state_referenced_locally */
+  let title = $state(memo?.title ?? '');
+  /* svelte-ignore state_referenced_locally */
+  let category = $state(memo?.category ?? '');
+  /* svelte-ignore state_referenced_locally */
+  let tagsInput = $state((memo?.tags ?? []).join(', '));
+  /* svelte-ignore state_referenced_locally */
+  let sourceUrl = $state(memo?.source_url ?? '');
+  /* svelte-ignore state_referenced_locally */
+  let rawContent = $state(memo?.raw_content ?? '');
   let saving = $state(false);
   let deleting = $state(false);
-  let error = $state('');
+  let errorMsg = $state('');
+  let enter = $state(false);
+
+  $effect(() => {
+    const raf = requestAnimationFrame(() => (enter = true));
+    return () => cancelAnimationFrame(raf);
+  });
+
+  function inferSourceType(url: string): string | null {
+    if (!url) return null;
+    if (/x\.com|twitter\.com/.test(url)) return 'X';
+    try {
+      const u = new URL(url);
+      return u.hostname.replace(/^www\./, '');
+    } catch {
+      return 'Web';
+    }
+  }
 
   async function handleSave() {
     saving = true;
-    error = '';
+    errorMsg = '';
     try {
       const tags = tagsInput
         .split(',')
-        .map((t) => t.trim())
+        .map((t) => t.trim().replace(/^#/, ''))
         .filter(Boolean);
 
-      const res = await fetch(`/api/memos/${memo.id}`, {
-        method: 'PATCH',
+      const payload: Record<string, unknown> = {
+        title: title.trim() || '제목 없음',
+        category: category.trim() || null,
+        tags,
+        source_url: sourceUrl.trim() || null,
+        source_type: inferSourceType(sourceUrl.trim()),
+        raw_content: rawContent || null
+      };
+
+      const url = isNew ? '/api/memos' : `/api/memos/${memo!.id}`;
+      const method = isNew ? 'POST' : 'PATCH';
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, category: category || null, tags, raw_content: rawContent || null })
+        body: JSON.stringify(payload)
       });
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.message ?? '저장 실패');
+        throw new Error(body.message ?? `${isNew ? '생성' : '저장'} 실패`);
       }
 
       await invalidateAll();
+      const saved = { ...(memo as Memo), ...payload } as Memo;
+      onSaved?.(saved);
       onClose();
-    } catch (e: any) {
-      error = e.message;
+    } catch (e) {
+      errorMsg = e instanceof Error ? e.message : String(e);
     } finally {
       saving = false;
     }
   }
 
   async function handleDelete() {
+    if (!memo?.id) return;
     if (!confirm('이 메모를 삭제하시겠습니까?')) return;
     deleting = true;
-    error = '';
+    errorMsg = '';
     try {
       const res = await fetch(`/api/memos/${memo.id}`, { method: 'DELETE' });
       if (!res.ok) {
@@ -52,111 +103,101 @@
         throw new Error(body.message ?? '삭제 실패');
       }
       await invalidateAll();
-      if (onDeleted) {
-        onDeleted();
-      } else {
-        onClose();
-      }
-    } catch (e: any) {
-      error = e.message;
+      if (onDeleted) onDeleted();
+      else onClose();
+    } catch (e) {
+      errorMsg = e instanceof Error ? e.message : String(e);
     } finally {
       deleting = false;
     }
   }
 
-  function handleBackdropClick(e: MouseEvent) {
+  function handleBackdrop(e: MouseEvent) {
     if (e.target === e.currentTarget) onClose();
   }
 
-  function handleKeydown(e: KeyboardEvent) {
+  function handleKey(e: KeyboardEvent) {
     if (e.key === 'Escape') onClose();
   }
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window onkeydown={handleKey} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="backdrop" onclick={handleBackdropClick}>
-  <div class="modal" role="dialog" aria-modal="true" aria-label="메모 편집">
-    <header class="modal-header">
-      <h2>메모 편집</h2>
-      <button class="close-btn" onclick={onClose} aria-label="닫기">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-    </header>
+<div class="backdrop" class:enter onclick={handleBackdrop}>
+  <div class="sheet" class:enter role="dialog" aria-modal="true" aria-label={isNew ? '새 메모' : '메모 편집'}>
+    <div class="head">
+      <span class="mono kicker">{isNew ? 'Inscribe ——' : 'Amend ——'}</span>
+      <h2 class="serif title">{isNew ? 'New memo' : 'Editing'}</h2>
+    </div>
 
-    <div class="modal-body">
-      {#if memo.source_url}
-        <div class="field">
-          <span class="field-label">소스 URL</span>
-          <a href={memo.source_url} target="_blank" rel="noopener noreferrer" class="source-link">
-            {memo.source_url}
-          </a>
-        </div>
-      {/if}
-
-      <div class="field">
-        <label class="field-label" for="edit-title">제목</label>
+    <div class="scroll body">
+      <label class="field">
+        <span class="mono label">Source URL</span>
         <input
-          id="edit-title"
+          class="mono line-input"
+          type="url"
+          bind:value={sourceUrl}
+          placeholder="https://..." />
+      </label>
+
+      <label class="field">
+        <span class="mono label">Title</span>
+        <input
+          class="serif line-input large"
           type="text"
-          class="field-input"
           bind:value={title}
-        />
-      </div>
+          placeholder="제목을 입력하세요" />
+      </label>
 
-      <div class="field">
-        <label class="field-label" for="edit-category">카테고리</label>
+      <label class="field">
+        <span class="mono label">Section · 자유 입력</span>
         <input
-          id="edit-category"
+          class="mono line-input"
           type="text"
-          class="field-input"
           bind:value={category}
-          placeholder="예: Article, Video..."
-        />
-      </div>
+          placeholder="배움, 소비, 정보, 아이디어, 문화..." />
+      </label>
 
-      <div class="field">
-        <label class="field-label" for="edit-tags">태그 (쉼표로 구분)</label>
+      <label class="field">
+        <span class="mono label">Tags · 쉼표로 구분</span>
         <input
-          id="edit-tags"
+          class="mono line-input"
           type="text"
-          class="field-input"
           bind:value={tagsInput}
-          placeholder="예: ai, llm, ux"
-        />
-      </div>
+          placeholder="ai, github, 개발" />
+      </label>
 
-      <div class="field">
-        <label class="field-label" for="edit-raw">원문</label>
+      <label class="field">
+        <span class="mono label">Body</span>
         <textarea
-          id="edit-raw"
-          class="field-input field-textarea"
+          class="serif body-input"
+          rows="6"
           bind:value={rawContent}
-          placeholder="원문 내용을 입력하세요"
-        ></textarea>
-      </div>
+          placeholder="원문 혹은 메모를 입력하세요"></textarea>
+      </label>
 
-      {#if error}
-        <p class="error-msg">{error}</p>
+      {#if errorMsg}
+        <p class="mono error">{errorMsg}</p>
       {/if}
     </div>
 
-    <footer class="modal-footer">
-      <button class="btn btn-danger" onclick={handleDelete} disabled={deleting}>
-        {deleting ? '삭제 중...' : '삭제'}
-      </button>
-      <div class="footer-right">
-        <button class="btn btn-ghost" onclick={onClose}>취소</button>
-        <button class="btn btn-primary" onclick={handleSave} disabled={saving}>
-          {saving ? '저장 중...' : '저장'}
+    <div class="foot">
+      {#if !isNew}
+        <button class="mono delete" onclick={handleDelete} disabled={deleting}>
+          {deleting ? 'Deleting...' : 'Delete ×'}
+        </button>
+      {:else}
+        <span></span>
+      {/if}
+      <div class="right">
+        <button class="mono cancel" onclick={onClose}>Cancel</button>
+        <button class="mono save" onclick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : 'Save ⟶'}
         </button>
       </div>
-    </footer>
+    </div>
   </div>
 </div>
 
@@ -164,179 +205,163 @@
   .backdrop {
     position: fixed;
     inset: 0;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-    backdrop-filter: blur(2px);
+    z-index: 60;
+    background: rgba(17, 17, 17, 0);
+    transition: background 160ms ease;
+    display: grid;
+    place-items: center;
+    padding: 24px;
   }
-
-  .modal {
-    background-color: var(--color-bg-elevated);
-    border: 1px solid var(--color-border);
-    border-radius: 10px;
-    width: 100%;
-    max-width: 480px;
+  .backdrop.enter {
+    background: rgba(17, 17, 17, 0.5);
+  }
+  .sheet {
+    width: min(620px, 96vw);
+    max-height: calc(100vh - 48px);
+    background: var(--paper);
+    border: 1px solid var(--ink);
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    transform: translateY(10px);
+    opacity: 0;
+    transition:
+      transform 200ms cubic-bezier(0.2, 0.8, 0.3, 1),
+      opacity 160ms ease;
   }
-
-  .modal-header {
+  .sheet.enter {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  .head {
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--ink);
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .modal-header h2 {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--color-text-primary);
-  }
-
-  .close-btn {
-    display: flex;
     align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    background: transparent;
-    border: none;
-    border-radius: 4px;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    transition: all 0.12s ease;
+    gap: 20px;
   }
-
-  .close-btn:hover {
-    background-color: var(--color-bg-surface);
-    color: var(--color-text-primary);
+  .kicker {
+    font-size: 10.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-3);
   }
-
-  .modal-body {
-    padding: 20px;
+  .title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.015em;
+  }
+  .body {
+    padding: 22px 28px;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 22px;
   }
-
   .field {
     display: flex;
     flex-direction: column;
     gap: 6px;
   }
-
-  .field-label {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--color-text-secondary);
+  .label {
+    font-size: 10.5px;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: var(--ink-3);
   }
-
-  .field-input {
-    padding: 8px 12px;
-    background-color: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
-    border-radius: 6px;
-    color: var(--color-text-primary);
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.15s ease;
-  }
-
-  .field-input:focus {
-    border-color: var(--color-accent);
-  }
-
-  .field-textarea {
-    min-height: 160px;
-    resize: vertical;
-    font-family: inherit;
-    line-height: 1.6;
-  }
-
-  .source-link {
-    font-size: 12px;
-    color: var(--color-accent);
-    text-decoration: none;
-    word-break: break-all;
-    line-height: 1.4;
-  }
-
-  .source-link:hover {
-    text-decoration: underline;
-  }
-
-  .error-msg {
-    margin: 0;
-    padding: 8px 12px;
-    background-color: color-mix(in srgb, #e53e3e 15%, transparent);
-    border: 1px solid color-mix(in srgb, #e53e3e 30%, transparent);
-    border-radius: 6px;
-    font-size: 13px;
-    color: #fc8181;
-  }
-
-  .modal-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 20px;
-    border-top: 1px solid var(--color-border);
-  }
-
-  .footer-right {
-    display: flex;
-    gap: 8px;
-  }
-
-  .btn {
-    padding: 7px 16px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
+  .line-input {
+    width: 100%;
+    padding: 8px 0;
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: 0;
     border: none;
-    transition: all 0.12s ease;
+    outline: none;
+    border-bottom: 1px solid var(--rule);
+    transition: border-color 120ms ease;
   }
-
-  .btn:disabled {
+  .line-input.large {
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.015em;
+  }
+  .mono.line-input {
+    font-size: 13px;
+  }
+  .line-input:focus {
+    border-bottom-color: var(--ink);
+  }
+  .body-input {
+    width: 100%;
+    padding: 10px 0;
+    font-size: 16px;
+    line-height: 1.65;
+    border: none;
+    outline: none;
+    border-bottom: 1px solid var(--rule);
+    resize: vertical;
+    transition: border-color 120ms ease;
+  }
+  .body-input:focus {
+    border-bottom-color: var(--ink);
+  }
+  .error {
+    margin: 0;
+    padding: 8px 0;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink);
+    border-top: 1px solid var(--ink);
+  }
+  .foot {
+    padding: 14px 28px;
+    border-top: 1px solid var(--ink);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+  }
+  .delete {
+    font-size: 10.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 2px;
+  }
+  .delete:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
-
-  .btn-primary {
-    background-color: var(--color-accent);
-    color: #fff;
+  .right {
+    display: flex;
+    gap: 16px;
+    align-items: center;
   }
-
-  .btn-primary:hover:not(:disabled) {
-    background-color: var(--color-accent-hover);
+  .cancel {
+    font-size: 10.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-3);
   }
-
-  .btn-ghost {
-    background-color: transparent;
-    color: var(--color-text-secondary);
-    border: 1px solid var(--color-border);
+  .save {
+    font-size: 10.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 10px 18px;
+    background: var(--ink);
+    color: var(--paper);
+    border: 1px solid var(--ink);
+    transition: background 120ms ease, color 120ms ease;
   }
-
-  .btn-ghost:hover:not(:disabled) {
-    background-color: var(--color-bg-surface);
-    color: var(--color-text-primary);
+  .save:hover:not(:disabled) {
+    background: var(--paper);
+    color: var(--ink);
   }
-
-  .btn-danger {
-    background-color: transparent;
-    color: #fc8181;
-    border: 1px solid color-mix(in srgb, #e53e3e 40%, transparent);
-  }
-
-  .btn-danger:hover:not(:disabled) {
-    background-color: color-mix(in srgb, #e53e3e 15%, transparent);
+  .save:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 </style>
