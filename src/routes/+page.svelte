@@ -8,6 +8,7 @@
   import GalleryView from '$lib/components/GalleryView.svelte';
   import IndexView from '$lib/components/IndexView.svelte';
   import EmptyState from '$lib/components/EmptyState.svelte';
+  import Pagination from '$lib/components/Pagination.svelte';
   import Footer from '$lib/components/Footer.svelte';
   import Reader from '$lib/components/Reader.svelte';
   import EditModal from '$lib/components/EditModal.svelte';
@@ -37,20 +38,27 @@
     !!data.search || !!data.category || (data.tags?.length ?? 0) > 0
   );
 
+  const totalPages = $derived(
+    Math.max(1, Math.ceil((data.filteredCount ?? 0) / (data.pageSize || 15)))
+  );
+
   function buildUrl(params: {
     q?: string;
     category?: string;
     tags?: string[];
+    page?: number;
   }): string {
     const sp = new URLSearchParams();
     if (params.q) sp.set('q', params.q);
     if (params.category) sp.set('category', params.category);
     for (const t of params.tags ?? []) sp.append('tag', t);
+    if (params.page && params.page > 1) sp.set('page', String(params.page));
     const qs = sp.toString();
     return qs ? `/?${qs}` : '/';
   }
 
   async function onSearch(q: string) {
+    // Filter change — reset to page 1
     const url = buildUrl({
       q: q.trim(),
       category: data.category,
@@ -78,6 +86,18 @@
 
   function clearAll() {
     goto('/', { keepFocus: true, noScroll: true });
+  }
+
+  function changePage(nextPage: number) {
+    const url = buildUrl({
+      q: data.search,
+      category: data.category,
+      tags: data.tags,
+      page: nextPage
+    });
+    goto(url, { keepFocus: true }).then(() => {
+      if (browser) window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   }
 
   function setView(v: View) {
@@ -141,11 +161,13 @@
   {setView}
   onNew={handleNew}
   total={data.total}
-  filteredCount={memos.length}
+  filteredCount={data.filteredCount}
 />
 
 <Navbar
-  {memos}
+  categoryCounts={data.categoryCounts}
+  tagCounts={data.tagCounts}
+  total={data.total}
   activeCategory={data.category}
   {setActiveCategory}
   activeTags={data.tags}
@@ -162,6 +184,8 @@
   {:else}
     <GalleryView {memos} onOpen={handleOpen} />
   {/if}
+
+  <Pagination page={data.page} {totalPages} onChange={changePage} />
 </main>
 
 <Footer />
