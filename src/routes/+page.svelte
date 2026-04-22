@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { navigating } from '$app/state';
   import { browser } from '$app/environment';
   import type { PageData } from './$types';
   import type { Memo } from '$lib/supabase/types';
@@ -176,7 +177,11 @@
   {filtering}
 />
 
-<main>
+{#if navigating.to}
+  <div class="nav-progress" aria-hidden="true"></div>
+{/if}
+
+<main class:loading={!!navigating.to}>
   {#if memos.length === 0}
     <EmptyState search={data.search} category={data.category} tags={data.tags} />
   {:else if view === 'index'}
@@ -221,6 +226,37 @@
   @media (max-width: 640px) {
     main {
       padding: 24px 20px 80px;
+    }
+  }
+
+  main.loading {
+    opacity: 0.5;
+    transition: opacity 120ms ease 120ms;
+  }
+
+  .nav-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    background: var(--ink);
+    z-index: 100;
+    animation: nav-progress 900ms cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+    pointer-events: none;
+  }
+
+  @keyframes nav-progress {
+    0% {
+      width: 0;
+      opacity: 0.4;
+    }
+    50% {
+      width: 70%;
+      opacity: 1;
+    }
+    100% {
+      width: 100%;
+      opacity: 0;
     }
   }
 </style>
